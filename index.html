@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Leave a Review — ADY Industries</title>
+<style>
+  :root{--bg:#f7f9fc;--card:#fff;--accent:#0b76ef;--muted:#58636f}
+  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial; background:var(--bg); margin:0;padding:20px;color:#0b1220}
+  .wrap{max-width:760px;margin:28px auto}
+  .card{background:var(--card);padding:22px;border-radius:12px;box-shadow:0 10px 30px rgba(11,23,40,.06)}
+  h1{margin:0;font-size:20px}
+  p.lead{color:var(--muted);margin:8px 0 16px}
+  .reviewBox{background:#fbfeff;border:1px solid #e6f0ff;padding:18px;border-radius:10px;min-height:110px;display:flex;align-items:flex-start;gap:12px}
+  .reviewText{flex:1;font-size:15px;line-height:1.5;color:#0b1220;white-space:pre-wrap}
+  .controls{display:flex;gap:8px;margin-top:14px}
+  button{border:0;padding:10px 14px;border-radius:9px;cursor:pointer;font-weight:700}
+  .btn-primary{background:var(--accent);color:#fff}
+  .btn-ghost{background:#fff;border:1px solid #e6e9ee;color:#0b1220}
+  .btn-disabled{opacity:.6;pointer-events:none}
+  .tips{margin-top:18px;padding:12px;border-radius:10px;background:#fffdf6;border:1px solid #fff3d8}
+  .tips h3{margin:0 0 8px;font-size:15px}
+  .tips ul{margin:0;padding-left:18px;color:var(--muted)}
+  .small{font-size:13px;color:var(--muted);margin-top:10px}
+  .meta{font-size:13px;color:#6b7280;margin-top:8px;display:flex;gap:12px;align-items:center}
+  .toneBadge{padding:6px 10px;border-radius:999px;background:#eef6ff;color:#0b76ef;font-weight:700}
+  .suggest{font-size:13px;color:#334155;margin-top:8px}
+  footer{margin-top:14px;font-size:13px;color:var(--muted)}
+  @media (max-width:640px){.controls{flex-direction:column}}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card" role="region" aria-label="Review generator">
+      <h1>Leave a review</h1>
+      <p class="lead">One-click reviews that read natural. Click <strong>Copy</strong> to copy a review and <strong>Refresh</strong> for a different variation. After copying, use the button to open Google Reviews and paste your text. Please edit if needed to reflect your real experience.</p>
+
+      <div class="reviewBox" id="reviewBox" aria-live="polite">
+        <div style="display:flex;flex-direction:column;align-items:center;min-width:60px">
+          <div id="stars" style="font-weight:800;color:#f6b01a">★★★★★</div>
+        </div>
+        <div style="flex:1">
+          <div class="reviewText" id="reviewText">Loading a friendly review…</div>
+          <div class="suggest" id="toneSuggest" aria-hidden="false"></div>
+        </div>
+      </div>
+
+      <div class="controls" role="toolbar" aria-label="Actions">
+        <button class="btn-primary" id="copyBtn">Copy review</button>
+        <button class="btn-ghost" id="refreshBtn">Refresh review</button>
+        <button class="btn-primary btn-disabled" id="openGoogleBtn" title="Will open after copy">Open Google to paste</button>
+      </div>
+
+      <div class="tips" id="tips">
+        <h3>Tips for an even better review</h3>
+        <ul>
+          <li>Attach 1–3 clear photos (product in use, packaging, display).</li>
+          <li>A short 5–12s video showing the product or unboxing helps a lot.</li>
+          <li>Pick a review tone that matches how you felt — casual for quick friendly posts, formal for detailed professional feedback.</li>
+          <li>Small personal details (how long you used it, what you liked) make reviews authentic.</li>
+        </ul>
+        <div class="small">After copying the review, click “Open Google to paste” to go to the review page and paste the text there.</div>
+      </div>
+
+      <div class="meta" id="usageMeta">
+        <div>Tone: <span class="toneBadge" id="toneBadge">—</span></div>
+        <div>Length: <span id="lengthLabel">—</span></div>
+        <div>ID: <span id="uniqId">—</span></div>
+      </div>
+
+      <footer>
+        <small>Please make any changes necessary so the review accurately reflects your experience.</small>
+      </footer>
+    </div>
+  </div>
+
+<script>
+/* ===== CONFIG (owner editable) ===== */
+const CONFIG = {
+  businessName: "ADY Industries", // used only rarely and never embedded verbatim into reviews
+  googleReviewLink: "https://g.page/r/CXy6kIm36mzKEBM/review"
+};
+
+/* ===== Fragment banks (no explicit business name inside reviews) =====
+   Most reviews omit the business name. A smaller fraction include a subtle natural mention
+   such as 'from this seller' or 'ordered from them' — never the fixed business name.
+*/
+
+const FRAG = {
+  casual: {
+    openings: [
+      "Really happy with my purchase.",
+      "I’m quite pleased with what I got.",
+      "Bought recently — overall a smooth experience.",
+      "Nice experience — got it quickly and it works well.",
+      "Super happy with this purchase."
+    ],
+    specifics: [
+      "Works well and seems accurate.",
+      "Looks solid and does the job.",
+      "Setup was straightforward and it works as expected.",
+      "No hiccups — it arrived in good shape.",
+      "Feels well-made and reliable."
+    ],
+    closings: [
+      "Would recommend.",
+      "Five stars from me!",
+      "Will buy again.",
+      "Thanks — very satisfied!",
+      "Thumbs up."
+    ],
+    small: [
+      "— Ramesh",
+      "— Priya",
+      "— A customer",
+      "— M."
+    ],
+    fillers: [
+      "Also,",
+      "By the way,",
+      "Quick note:",
+      ""
+    ]
+  },
+  formal: {
+    openings: [
+      "I recently made a purchase and was satisfied with the service provided.",
+      "My experience was professional and reliable.",
+      "I would like to commend the team for a smooth transaction.",
+      "I am pleased to report a positive purchase experience.",
+      "The process from order to delivery was efficient."
+    ],
+    specifics: [
+      "The product quality is excellent and matched the description.",
+      "Delivery was prompt and packaging was secure and professional.",
+      "Customer service provided clear and timely assistance.",
+      "The item performed consistently and met expectations.",
+      "Documentation and accessories were included and helpful."
+    ],
+    closings: [
+      "I recommend this seller to others.",
+      "Very satisfied with the purchase and service.",
+      "A reliable option; I would purchase again.",
+      "Five stars for quality and service."
+    ],
+    small: [
+      "— S. Gupta",
+      "— A. Sharma",
+      "— Verified buyer",
+      ""
+    ],
+    fillers: [
+      "Moreover,",
+      "Additionally,",
+      "It is worth noting that",
+      ""
+    ]
+  },
+  subtleMentions: [
+    "I ordered this from them last week and it arrived quickly.",
+    "Bought from this seller — delivery was smooth.",
+    "Ordered through their online store and it arrived well packaged.",
+    "Purchased from the team and they followed up politely."
+  ],
+  mixedExtras: [
+    "I appreciated the clear instructions included.",
+    "Packaging was neat and secure — no damage.",
+    "Support answered my questions quickly.",
+    "Was pleasantly surprised by how well it worked.",
+    "Overall, a dependable choice."
+  ],
+  closers: [
+    "Highly recommended.",
+    "Would consider purchasing again.",
+    "Thank you for the good service.",
+    "Strongly recommended.",
+    "Appreciate the prompt service."
+  ]
+};
+
+/* Utility functions */
+function rnd(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function chance(p){ return Math.random() < p; }
+
+/* Paraphrase helper for subtle variation */
+function paraphrase(text){
+  const swaps = [
+    ["very satisfied", "quite pleased"],
+    ["prompt and", "quick and"],
+    ["packaging was secure", "packaging was neat"],
+    ["helpful", "responsive"],
+    ["met expectations", "matched expectations"]
+  ];
+  let out = text;
+  if (chance(0.45)){
+    const [a,b] = swaps[Math.floor(Math.random()*swaps.length)];
+    out = out.replace(a, b);
+  }
+  if (chance(0.09)) out = out.replace(/\.$/, "!");
+  return out;
+}
+
+/* Build casual/formal/mixed reviews, with an occasional subtle mention */
+function buildCasual(length){
+  const parts = [];
+  if (length !== 'short' && chance(0.35)) parts.push(rnd(FRAG.casual.openings));
+  else if (chance(0.5)) parts.push(rnd(FRAG.casual.openings));
+  parts.push(rnd(FRAG.casual.specifics));
+  if (length !== 'short' && chance(0.6)) parts.push(rnd(FRAG.casual.fillers) + " " + rnd(FRAG.casual.specifics));
+  if (chance(0.45)) parts.push(rnd(FRAG.mixedExtras));
+  if (chance(0.22)) parts.push(rnd(FRAG.casual.closings));
+  if (chance(0.18)) parts.push(rnd(FRAG.casual.small));
+  // occasional subtle mention (small probability)
+  if (chance(0.18)) parts.splice(Math.floor(parts.length/2), 0, rnd(FRAG.subtleMentions));
+  return parts.filter(Boolean).join(" ");
+}
+
+function buildFormal(length){
+  const parts = [];
+  parts.push(rnd(FRAG.formal.openings));
+  parts.push(rnd(FRAG.formal.specifics));
+  if (length === 'long' || (length === 'medium' && chance(0.7))) parts.push(rnd(FRAG.formal.fillers) + " " + rnd(FRAG.formal.specifics));
+  if (chance(0.5)) parts.push(rnd(FRAG.mixedExtras));
+  parts.push(rnd(FRAG.formal.closings));
+  if (chance(0.25)) parts.push(rnd(FRAG.formal.small));
+  if (chance(0.12)) parts.splice(1, 0, rnd(FRAG.subtleMentions)); // small chance early mention
+  return parts.filter(Boolean).join(" ");
+}
+
+function buildMixed(length){
+  const parts = [];
+  if (chance(0.6)) parts.push(rnd(FRAG.casual.openings));
+  else parts.push(rnd(FRAG.formal.openings));
+  parts.push(rnd(FRAG.formal.specifics));
+  if (length !== 'short' && chance(0.6)) parts.push(rnd(FRAG.casual.specifics));
+  if (chance(0.45)) parts.push(rnd(FRAG.mixedExtras));
+  parts.push(rnd(FRAG.closers));
+  if (chance(0.25)) parts.push(Math.random() > 0.5 ? rnd(FRAG.casual.small) : rnd(FRAG.formal.small));
+  if (chance(0.14)) parts.splice(Math.floor(parts.length/2), 0, rnd(FRAG.subtleMentions));
+  return parts.filter(Boolean).join(" ");
+}
+
+/* Choose length */
+function pickLength(){
+  const r = Math.random();
+  if (r < 0.32) return 'short';
+  if (r < 0.76) return 'medium';
+  return 'long';
+}
+
+/* Uniqueness storage */
+const STORAGE_KEY = 'genReviews_mixed_nobiz_' + (CONFIG.businessName || 'biz').replace(/\s+/g,'_');
+function getSavedSet(){
+  try{ return new Set(JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]")); }catch(e){ return new Set(); }
+}
+function saveToSet(s){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(s).slice(-3000))); }catch(e){} }
+function hashText(t){
+  let h = 2166136261 >>> 0;
+  for (let i=0;i<t.length;i++){
+    h ^= t.charCodeAt(i);
+    h = Math.imul(h, 16777619) >>> 0;
+  }
+  return h.toString(16);
+}
+
+/* Generate unique review with tone label and suggestion */
+function generateUnique(){
+  const saved = getSavedSet();
+  const maxAttempts = 60;
+  for (let attempt=0; attempt<maxAttempts; attempt++){
+    const length = pickLength();
+    // pick tone weighted: mixed 40%, casual 35%, formal 25%
+    const r = Math.random();
+    let tone = r < 0.35 ? 'casual' : (r < 0.75 ? 'mixed' : 'formal');
+    let review = "";
+    if (tone === 'casual') review = buildCasual(length);
+    else if (tone === 'formal') review = buildFormal(length);
+    else review = buildMixed(length);
+
+    // slight paraphrase sometimes
+    if (chance(0.5)) review = paraphrase(review);
+
+    // ensure punctuation
+    review = review.trim();
+    if (!/[.!?]$/.test(review)) review += ".";
+
+    const h = hashText(review);
+    if (!saved.has(h)){
+      saved.add(h);
+      saveToSet(saved);
+      // suggestion text
+      const suggestion = tone === 'casual' 
+        ? "Suggested when: You want a friendly, quick post — short & personal." 
+        : (tone === 'formal' 
+           ? "Suggested when: You prefer a professional, detailed review — good for business credibility." 
+           : "Suggested when: Balance personal tone with professional detail — great for thorough but natural reviews.");
+      return { review, tone, length, id: h, suggestion };
+    }
+    // if duplicate, continue attempts
+  }
+
+  // fallback forced unique
+  const fallback = buildMixed('medium') + " Thank you!";
+  const fallbackHash = hashText(fallback + Date.now());
+  const s = getSavedSet();
+  s.add(fallbackHash);
+  saveToSet(s);
+  return { review: fallback, tone: 'mixed/forced', length: 'medium', id: fallbackHash, suggestion: "Suggested when: Use this balanced tone." };
+}
+
+/* UI wiring */
+const reviewTextEl = document.getElementById('reviewText');
+const toneBadgeEl = document.getElementById('toneBadge');
+const lengthLabelEl = document.getElementById('lengthLabel');
+const uniqIdEl = document.getElementById('uniqId');
+const toneSuggestEl = document.getElementById('toneSuggest');
+
+const copyBtn = document.getElementById('copyBtn');
+const refreshBtn = document.getElementById('refreshBtn');
+const openGoogleBtn = document.getElementById('openGoogleBtn');
+
+let current = { review: "", tone: "", length: "", id: "", suggestion: "" };
+
+function render(o){
+  current = o;
+  reviewTextEl.textContent = o.review;
+  toneBadgeEl.textContent = (o.tone || "—").toUpperCase();
+  lengthLabelEl.textContent = (o.length || "—").toUpperCase();
+  uniqIdEl.textContent = o.id || "—";
+  toneSuggestEl.textContent = o.suggestion || "";
+  // disable open-google until copy
+  openGoogleBtn.classList.add('btn-disabled');
+  // reset open button click handlers by cloning
+  const newOpen = openGoogleBtn.cloneNode(true);
+  openGoogleBtn.parentNode.replaceChild(newOpen, openGoogleBtn);
+  window.openGoogleBtn = newOpen;
+}
+
+/* Generate & display */
+function showNew(){
+  const gen = generateUnique();
+  render(gen);
+}
+
+/* Copy logic and enable open */
+async function copyCurrent(){
+  if(!current || !current.review) return;
+  try{
+    await navigator.clipboard.writeText(current.review);
+    copyBtn.textContent = "Copied!";
+    setTimeout(()=> copyBtn.textContent = "Copy review", 1400);
+    enableOpen();
+  }catch(e){
+    const ta = document.createElement('textarea');
+    ta.value = current.review;
+    document.body.appendChild(ta);
+    ta.select();
+    try{
+      document.execCommand('copy');
+      copyBtn.textContent = "Copied!";
+      setTimeout(()=> copyBtn.textContent = "Copy review", 1400);
+      enableOpen();
+    }catch(err){
+      alert("Copy failed — please select the text manually and copy:\n\n" + current.review);
+    } finally { document.body.removeChild(ta); }
+  }
+}
+
+/* Enable open button after copy */
+function enableOpen(){
+  const btn = document.getElementById('openGoogleBtn');
+  btn.classList.remove('btn-disabled');
+  btn.title = "Open Google review form";
+  btn.addEventListener('click', ()=> {
+    if (CONFIG.googleReviewLink) window.open(CONFIG.googleReviewLink, "_blank");
+    else alert("Google review link not set. Edit CONFIG.googleReviewLink in the file.");
+  }, {once:true});
+}
+
+/* bindings */
+refreshBtn.addEventListener('click', showNew);
+copyBtn.addEventListener('click', copyCurrent);
+
+/* initial */
+showNew();
+
+</script>
+</body>
+</html>
