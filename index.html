@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Leave a Review — ADY Industries</title>
+<title>Leave a Review</title>
 <style>
   :root{--bg:#f7f9fc;--card:#fff;--accent:#0b76ef;--muted:#58636f}
   body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial; background:var(--bg); margin:0;padding:20px;color:#0b1220}
@@ -33,7 +33,7 @@
   <div class="wrap">
     <div class="card" role="region" aria-label="Review generator">
       <h1>Leave a review</h1>
-      <p class="lead">One-click reviews that read natural. Click <strong>Copy</strong> to copy a review and <strong>Refresh</strong> for a different variation. After copying, use the button to open Google Reviews and paste your text. Please edit if needed to reflect your real experience.</p>
+      <p class="lead">Click <strong>Copy</strong> to copy a natural review and <strong>Refresh</strong> for a different variation. After copying, click the button to open Google Reviews and paste your text. Please edit if needed to reflect your real experience.</p>
 
       <div class="reviewBox" id="reviewBox" aria-live="polite">
         <div style="display:flex;flex-direction:column;align-items:center;min-width:60px">
@@ -77,13 +77,12 @@
 <script>
 /* ===== CONFIG (owner editable) ===== */
 const CONFIG = {
-  businessName: "ADY Industries", // used only rarely and never embedded verbatim into reviews
+  businessName: "ADY Industries", // kept for internal use only; NOT inserted into reviews
   googleReviewLink: "https://g.page/r/CXy6kIm36mzKEBM/review"
 };
 
-/* ===== Fragment banks (no explicit business name inside reviews) =====
-   Most reviews omit the business name. A smaller fraction include a subtle natural mention
-   such as 'from this seller' or 'ordered from them' — never the fixed business name.
+/* ===== Fragment banks (NO NAMES OR SIGNATURES) =====
+   Reviews will NOT include customer names. Subtle mentions (without business name) may appear occasionally.
 */
 
 const FRAG = {
@@ -108,12 +107,6 @@ const FRAG = {
       "Will buy again.",
       "Thanks — very satisfied!",
       "Thumbs up."
-    ],
-    small: [
-      "— Ramesh",
-      "— Priya",
-      "— A customer",
-      "— M."
     ],
     fillers: [
       "Also,",
@@ -143,12 +136,6 @@ const FRAG = {
       "A reliable option; I would purchase again.",
       "Five stars for quality and service."
     ],
-    small: [
-      "— S. Gupta",
-      "— A. Sharma",
-      "— Verified buyer",
-      ""
-    ],
     fillers: [
       "Moreover,",
       "Additionally,",
@@ -159,8 +146,8 @@ const FRAG = {
   subtleMentions: [
     "I ordered this from them last week and it arrived quickly.",
     "Bought from this seller — delivery was smooth.",
-    "Ordered through their online store and it arrived well packaged.",
-    "Purchased from the team and they followed up politely."
+    "Ordered through the online store and it arrived well packaged.",
+    "Purchased and the team followed up politely."
   ],
   mixedExtras: [
     "I appreciated the clear instructions included.",
@@ -200,7 +187,7 @@ function paraphrase(text){
   return out;
 }
 
-/* Build casual/formal/mixed reviews, with an occasional subtle mention */
+/* Build casual/formal/mixed reviews (NO NAMES) */
 function buildCasual(length){
   const parts = [];
   if (length !== 'short' && chance(0.35)) parts.push(rnd(FRAG.casual.openings));
@@ -209,9 +196,8 @@ function buildCasual(length){
   if (length !== 'short' && chance(0.6)) parts.push(rnd(FRAG.casual.fillers) + " " + rnd(FRAG.casual.specifics));
   if (chance(0.45)) parts.push(rnd(FRAG.mixedExtras));
   if (chance(0.22)) parts.push(rnd(FRAG.casual.closings));
-  if (chance(0.18)) parts.push(rnd(FRAG.casual.small));
-  // occasional subtle mention (small probability)
-  if (chance(0.18)) parts.splice(Math.floor(parts.length/2), 0, rnd(FRAG.subtleMentions));
+  // occasional subtle mention (small probability) - does NOT contain business name or customer names
+  if (chance(0.16)) parts.splice(Math.floor(parts.length/2), 0, rnd(FRAG.subtleMentions));
   return parts.filter(Boolean).join(" ");
 }
 
@@ -222,20 +208,19 @@ function buildFormal(length){
   if (length === 'long' || (length === 'medium' && chance(0.7))) parts.push(rnd(FRAG.formal.fillers) + " " + rnd(FRAG.formal.specifics));
   if (chance(0.5)) parts.push(rnd(FRAG.mixedExtras));
   parts.push(rnd(FRAG.formal.closings));
-  if (chance(0.25)) parts.push(rnd(FRAG.formal.small));
+  if (chance(0.25)) parts.push(rnd(FRAG.formal.fillers));
   if (chance(0.12)) parts.splice(1, 0, rnd(FRAG.subtleMentions)); // small chance early mention
   return parts.filter(Boolean).join(" ");
 }
 
 function buildMixed(length){
   const parts = [];
-  if (chance(0.6)) parts.push(rnd(FRAG.casual.openings));
-  else parts.push(rnd(FRAG.formal.openings));
+  if (chance(0.6)) parts.push(rnd(FRAG.casual.openings)); else parts.push(rnd(FRAG.formal.openings));
   parts.push(rnd(FRAG.formal.specifics));
   if (length !== 'short' && chance(0.6)) parts.push(rnd(FRAG.casual.specifics));
   if (chance(0.45)) parts.push(rnd(FRAG.mixedExtras));
   parts.push(rnd(FRAG.closers));
-  if (chance(0.25)) parts.push(Math.random() > 0.5 ? rnd(FRAG.casual.small) : rnd(FRAG.formal.small));
+  if (chance(0.25)) parts.push(rnd(FRAG.casual.fillers));
   if (chance(0.14)) parts.splice(Math.floor(parts.length/2), 0, rnd(FRAG.subtleMentions));
   return parts.filter(Boolean).join(" ");
 }
@@ -248,8 +233,8 @@ function pickLength(){
   return 'long';
 }
 
-/* Uniqueness storage */
-const STORAGE_KEY = 'genReviews_mixed_nobiz_' + (CONFIG.businessName || 'biz').replace(/\s+/g,'_');
+/* Uniqueness storage (no names anywhere) */
+const STORAGE_KEY = 'genReviews_nonames_' + (CONFIG.businessName || 'biz').replace(/\s+/g,'_');
 function getSavedSet(){
   try{ return new Set(JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]")); }catch(e){ return new Set(); }
 }
@@ -269,7 +254,6 @@ function generateUnique(){
   const maxAttempts = 60;
   for (let attempt=0; attempt<maxAttempts; attempt++){
     const length = pickLength();
-    // pick tone weighted: mixed 40%, casual 35%, formal 25%
     const r = Math.random();
     let tone = r < 0.35 ? 'casual' : (r < 0.75 ? 'mixed' : 'formal');
     let review = "";
@@ -277,10 +261,8 @@ function generateUnique(){
     else if (tone === 'formal') review = buildFormal(length);
     else review = buildMixed(length);
 
-    // slight paraphrase sometimes
     if (chance(0.5)) review = paraphrase(review);
 
-    // ensure punctuation
     review = review.trim();
     if (!/[.!?]$/.test(review)) review += ".";
 
@@ -288,7 +270,6 @@ function generateUnique(){
     if (!saved.has(h)){
       saved.add(h);
       saveToSet(saved);
-      // suggestion text
       const suggestion = tone === 'casual' 
         ? "Suggested when: You want a friendly, quick post — short & personal." 
         : (tone === 'formal' 
@@ -296,10 +277,8 @@ function generateUnique(){
            : "Suggested when: Balance personal tone with professional detail — great for thorough but natural reviews.");
       return { review, tone, length, id: h, suggestion };
     }
-    // if duplicate, continue attempts
   }
 
-  // fallback forced unique
   const fallback = buildMixed('medium') + " Thank you!";
   const fallbackHash = hashText(fallback + Date.now());
   const s = getSavedSet();
@@ -328,9 +307,7 @@ function render(o){
   lengthLabelEl.textContent = (o.length || "—").toUpperCase();
   uniqIdEl.textContent = o.id || "—";
   toneSuggestEl.textContent = o.suggestion || "";
-  // disable open-google until copy
   openGoogleBtn.classList.add('btn-disabled');
-  // reset open button click handlers by cloning
   const newOpen = openGoogleBtn.cloneNode(true);
   openGoogleBtn.parentNode.replaceChild(newOpen, openGoogleBtn);
   window.openGoogleBtn = newOpen;
